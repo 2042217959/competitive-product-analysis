@@ -23,7 +23,7 @@ import http from "node:http";
 import path from "node:path";
 
 const appId = "product-competition";
-const version = "0.1.0";
+const version = "0.1.1";
 
 const rootDir = path.resolve(import.meta.dirname, "..");
 const buildRoot = path.join(rootDir, "build", "tutti-app");
