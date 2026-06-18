@@ -115,6 +115,7 @@ button {
   background: var(--surface);
   border-right: 1px solid var(--border);
   min-width: 0;
+  overflow: auto;
 }
 
 .sidebar-header {
@@ -270,7 +271,14 @@ button {
   text-overflow: ellipsis;
 }
 
-.session-delete {
+.session-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.session-action {
   display: grid;
   place-items: center;
   width: 24px;
@@ -281,13 +289,36 @@ button {
   transition: opacity 0.12s, background 0.12s, color 0.12s;
 }
 
-.session-item:hover .session-delete {
+.session-item:hover .session-action,
+.session-item:focus-within .session-action {
   opacity: 1;
 }
 
-.session-delete:hover {
+.session-action:hover {
   background: var(--surface-3);
+  color: var(--text);
+}
+
+.session-delete:hover {
   color: var(--danger);
+}
+
+.session-item.is-editing {
+  background: var(--surface-2);
+}
+
+.session-rename-input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  padding: 4px 7px;
+  outline: none;
 }
 
 /* ---------------------------------------------------------- chat column */
@@ -718,6 +749,7 @@ button {
 /* ---------------------------------------------------------- artifact rail */
 
 .artifact-rail {
+  overflow: auto;
   display: flex;
   flex-direction: column;
   border-left: 1px solid var(--border);
@@ -795,6 +827,48 @@ button {
   color: var(--text-faint);
 }
 
+.artifact-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.artifact-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+  width: 100%;
+}
+
+.artifact-group-toggle:hover {
+  background: var(--surface-2);
+  border-color: var(--border);
+}
+
+.artifact-chevron {
+  color: var(--text-faint);
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+}
+
+.artifact-chevron.open {
+  transform: rotate(90deg);
+}
+
+.artifact-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-left: 11px;
+  padding-left: 9px;
+  border-left: 1px solid var(--border);
+}
+
 /* ----------------------------------------------------------- modals */
 
 .artifact-modal {
@@ -805,6 +879,79 @@ button {
   place-items: center;
   z-index: 50;
   padding: 32px;
+}
+
+.confirm-panel {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  width: min(380px, 100%);
+  padding: 22px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.confirm-icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: rgba(220, 38, 38, 0.12);
+  color: #dc2626;
+  margin-bottom: 12px;
+}
+
+.confirm-title {
+  font-size: 15px;
+}
+
+.confirm-body {
+  margin: 8px 0 18px;
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.confirm-cancel,
+.confirm-delete {
+  flex: 1;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.confirm-cancel {
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.confirm-cancel:hover {
+  background: var(--surface-2);
+}
+
+.confirm-delete {
+  border: 1px solid #dc2626;
+  background: #dc2626;
+  color: #fff;
+}
+
+.confirm-delete:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
 }
 
 .artifact-modal-panel,
@@ -849,6 +996,29 @@ button {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.library-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  color: var(--text-faint);
+}
+
+.library-search-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 14.5px;
+  color: var(--text);
+}
+
+.library-search-input::placeholder {
+  color: var(--text-faint);
 }
 
 .icon-button {

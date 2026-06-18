@@ -8,7 +8,7 @@ const packageRoot = path.join(buildRoot, "package");
 const packageServerDir = path.join(packageRoot, "server");
 const packageWebDir = path.join(packageRoot, "web");
 const appId = "product-competition";
-const version = "0.1.1";
+const version = "0.1.3";
 
 await run("pnpm", ["build"], rootDir);
 await rm(buildRoot, { recursive: true, force: true });

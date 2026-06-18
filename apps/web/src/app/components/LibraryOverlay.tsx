@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FileText, Search, X } from "lucide-react";
 
 import type { ResearchSession } from "@product-competition/shared";
@@ -10,15 +11,49 @@ export function LibraryOverlay(props: {
   onClose: () => void;
 }) {
   const { t, locale } = useTranslation();
-  const withArtifacts = props.sessions.filter((session) => session.artifactCount > 0);
+  const [query, setQuery] = useState("");
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const withArtifacts = useMemo(
+    () => props.sessions.filter((session) => session.artifactCount > 0),
+    [props.sessions],
+  );
+
+  const results = useMemo(() => {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed) return withArtifacts;
+    return withArtifacts.filter((session) => session.title.toLowerCase().includes(trimmed));
+  }, [withArtifacts, query]);
 
   return (
     <div className="artifact-modal" onClick={props.onClose}>
       <div className="library-panel" onClick={(event) => event.stopPropagation()}>
         <header className="artifact-modal-header">
-          <div className="library-head-title">
+          <div className="library-search">
             <Search size={16} />
-            <strong>{t("library.title")}</strong>
+            <input
+              ref={inputRef}
+              className="library-search-input"
+              type="text"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  if (query) {
+                    setQuery("");
+                  } else {
+                    props.onClose();
+                  }
+                }
+              }}
+              placeholder={t("library.searchPlaceholder")}
+              aria-label={t("library.title")}
+            />
           </div>
           <button className="icon-button" onClick={props.onClose}>
             <X size={16} />
@@ -27,8 +62,10 @@ export function LibraryOverlay(props: {
         <div className="library-body">
           {withArtifacts.length === 0 ? (
             <p className="artifact-empty">{t("library.globalEmpty")}</p>
+          ) : results.length === 0 ? (
+            <p className="artifact-empty">{t("library.noMatch", { query: query.trim() })}</p>
           ) : (
-            withArtifacts.map((session) => (
+            results.map((session) => (
               <button
                 key={session.id}
                 className="library-row"

@@ -12,7 +12,7 @@ const SKILL_REL_DIR = `.local-agent/skills/${SKILL_SLUG}`;
 export function buildResearchSystemPrompt(context: ResearchRunContext): string {
   const python = context.pythonBin || "python3";
   return [
-    "You are the research operator for Competitive Research Studio, a local-first product-research workspace.",
+    "You are the research operator for Competitive Analysis, a local-first product-research workspace.",
     "Your job: when the user asks to research/analyze a product (e.g. \"调研一下 Notion\" or \"research Cursor\"), run a deep, evidence-backed product teardown using the bundled product-swipefile skill, and leave the resulting Markdown artifacts on disk.",
     "",
     "## The skill",
@@ -37,12 +37,24 @@ export function buildResearchSystemPrompt(context: ResearchRunContext): string {
  * run identity. The skill itself owns the heavy research instructions.
  */
 export function buildResearchPrompt(context: ResearchRunContext): string {
+  const python = context.pythonBin || "python3";
   return [
     "<research_turn>",
     `run_id: ${context.runId}`,
     `session_id: ${context.sessionId}`,
     `run_cwd: ${context.cwd}`,
     "</research_turn>",
+    ...(context.resuming
+      ? [
+          "",
+          "<continuation>",
+          "This session has an in-progress research run whose working directory was preserved at run_cwd. Do NOT start a fresh new-run by default — resume the existing run so already-collected evidence is not thrown away.",
+          `1. Find the existing run directory under run_cwd (it contains run.json/meta.json, typically run_cwd/<product_slug>/<timestamp>/). Run \`cd ${SKILL_REL_DIR}/scripts && ${python} research_helper.py stage-status --run-dir "<that dir>"\` to get the mechanical next_stage.`,
+          "2. Continue from next_stage: reuse the existing inventory.md and raw/ evidence, and only collect what is still missing. Do not re-run searches for evidence that is already frozen.",
+          "3. Only create a new run with new-run if no existing run directory is found, or if the user's new message is clearly about a different product than the in-progress run.",
+          "</continuation>",
+        ]
+      : []),
     "",
     "<user_message>",
     context.prompt,

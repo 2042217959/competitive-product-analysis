@@ -28,6 +28,12 @@ export interface ResearchRunContext {
   provider?: string;
   /** Requested model id. */
   model?: string;
+  /**
+   * True when `cwd` is the preserved working directory of a prior interrupted
+   * run in this session. The agent should inspect it with `stage-status` and
+   * continue from the next stage instead of starting a fresh run.
+   */
+  resuming?: boolean;
   signal?: AbortSignal;
 }
 

@@ -1,8 +1,8 @@
 {
   "schemaVersion": "tutti.app.manifest.v1",
   "appId": "product-competition",
-  "version": "0.1.1",
-  "name": "Competitive Research Studio",
+  "version": "0.1.3",
+  "name": "Competitive Analysis",
   "description": "Chat with a local agent to run evidence-backed product teardowns and keep every report in one place.",
   "icon": {
     "type": "asset",

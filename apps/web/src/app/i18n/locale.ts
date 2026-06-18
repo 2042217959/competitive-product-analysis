@@ -14,10 +14,12 @@ type TuttiAppContext = TuttiAppContextValue & {
 
 declare global {
   interface Window {
-    tutti?: {
-      appContext?: TuttiAppContext;
+    tuttiExternal?: {
+      app?: {
+        getContext(): Promise<unknown>;
+        subscribe(listener: (context: unknown) => void): () => void;
+      };
     };
-    tuttiAppContext?: TuttiAppContext;
   }
 }
 
@@ -90,7 +92,27 @@ export async function resolveInitialLocale(): Promise<AppLocale> {
 
 function readTuttiAppContextValue(): TuttiAppContext | null {
   if (typeof window === "undefined") return null;
-  return window.tutti?.appContext ?? window.tuttiAppContext ?? null;
+  const externalApp = window.tuttiExternal?.app;
+  if (!externalApp) return null;
+  return {
+    async get() {
+      return normalizeExternalAppContext(await externalApp.getContext());
+    },
+    subscribe(listener) {
+      return externalApp.subscribe((context) => {
+        listener(normalizeExternalAppContext(context));
+      });
+    },
+  };
+}
+
+function normalizeExternalAppContext(context: unknown): TuttiAppContextValue {
+  if (!context || typeof context !== "object") return {};
+  const record = context as Record<string, unknown>;
+  return {
+    ...(typeof record.locale === "string" ? { locale: record.locale } : {}),
+    ...(typeof record.language === "string" ? { language: record.language } : {}),
+  };
 }
 
 function normalizeAppContextLocaleValue(value: unknown): string | null {

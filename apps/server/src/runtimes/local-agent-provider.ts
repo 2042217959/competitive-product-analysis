@@ -15,7 +15,11 @@ import {
   type RuntimeStreamEvent,
 } from "./runtime-provider.js";
 
-const DEFAULT_TIMEOUT_MS = 1_800_000; // 30 min — deep research can be long.
+// Aligned with the product-swipefile skill's budget: run.py allows 5400s (90 min)
+// PER STAGE across two stages (collection + writing). This single local-agent run
+// covers the whole staged pipeline in one process, so it gets the full 2-stage
+// budget. Override with PRODUCT_COMPETITION_LOCAL_AGENT_TIMEOUT_MS when needed.
+const DEFAULT_TIMEOUT_MS = 10_800_000; // 180 min = 2 × 90 min/stage.
 const DEFAULT_PROVIDER = "claude";
 
 /**
@@ -233,7 +237,15 @@ class LocalAgentSessionStore {
 
 function isRecoverableResumeError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
-  return /thread\/resume|resume failed|no rollout found|session.*not found|conversation.*not found/i.test(message);
+  return (
+    // Generic resume failures surfaced by the kit / different CLIs.
+    /thread\/resume|resume failed|no rollout found/i.test(message) ||
+    // Claude CLI emits "No conversation found with session ID: <id>" when the
+    // stored session was purged (e.g. the previous run was cancelled). Match
+    // both "no <thing> found" and "<thing> ... not found" phrasings.
+    /no (?:session|conversation|thread|rollout) found/i.test(message) ||
+    /(?:session|conversation|thread)\b[^\n]*\bnot found/i.test(message)
+  );
 }
 
 function safePathSegment(value: string) {

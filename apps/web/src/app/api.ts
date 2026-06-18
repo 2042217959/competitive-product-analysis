@@ -32,6 +32,16 @@ export async function activateSession(sessionId: string): Promise<ResearchSessio
   );
 }
 
+export async function renameSession(sessionId: string, title: string): Promise<ResearchSession> {
+  return parseJsonResponse(
+    await fetch(API_ROUTES.session(sessionId), {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ title }),
+    }),
+  );
+}
+
 export async function deleteSession(sessionId: string): Promise<void> {
   await fetch(API_ROUTES.session(sessionId), { method: "DELETE" });
 }

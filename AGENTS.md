@@ -1,4 +1,4 @@
-# Competitive Research Studio Agent Guide
+# Competitive Analysis Agent Guide
 
 ## Repo layout
 

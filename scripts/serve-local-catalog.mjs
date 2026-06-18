@@ -2,7 +2,7 @@
 // desktop App Center can install "product-competition" without embedding it into tuttid.
 //
 // What it does:
-//   1. Ensures the packaged app artifact exists (build/tutti-app/product-competition-0.1.0.zip).
+//   1. Ensures the packaged app artifact exists (build/tutti-app/product-competition-0.1.3.zip).
 //   2. Stages a CDN-like directory: build/local-catalog/apps/<appId>/<version>/{zip,icon}.
 //   3. Computes the artifact sha256 + size and writes catalog.json (schema tutti.app.catalog.v1).
 //   4. Merges the official remote catalog so other recommended apps (group-chat, etc.) stay visible.
@@ -23,7 +23,7 @@ import http from "node:http";
 import path from "node:path";
 
 const appId = "product-competition";
-const version = "0.1.1";
+const version = "0.1.3";
 
 const rootDir = path.resolve(import.meta.dirname, "..");
 const buildRoot = path.join(rootDir, "build", "tutti-app");

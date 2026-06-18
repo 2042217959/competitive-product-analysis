@@ -42,7 +42,7 @@ if (runtimeConfig.paths.webDistDir) {
 app.get(API_ROUTES.health, async () => ({
   ok: true,
   name: "product-competition",
-  version: "0.1.0",
+  version: "0.1.3",
   skillAvailable: Boolean(runtimeConfig.paths.skillDir),
 }));
 

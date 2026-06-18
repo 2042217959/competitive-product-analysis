@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FileText, FileJson, Flag, LoaderCircle, X } from "lucide-react";
+import { ChevronRight, FileText, FileJson, Flag, Folder, LoaderCircle, X } from "lucide-react";
 
 import type { ResearchArtifact } from "@product-competition/shared";
 
@@ -10,6 +10,7 @@ import { Markdown } from "./Markdown.js";
 export function ArtifactPanel(props: { sessionId: string; artifacts: ResearchArtifact[] }) {
   const { t } = useTranslation();
   const [active, setActive] = useState<ResearchArtifact | null>(null);
+  const [rawExpanded, setRawExpanded] = useState(false);
 
   if (props.artifacts.length === 0) {
     return (
@@ -20,28 +21,66 @@ export function ArtifactPanel(props: { sessionId: string; artifacts: ResearchArt
     );
   }
 
+  const primaryArtifacts = props.artifacts.filter((artifact) => artifact.kind !== "raw");
+  const rawArtifacts = props.artifacts.filter((artifact) => artifact.kind === "raw");
+
   return (
     <aside className="artifact-rail">
       <div className="artifact-rail-header">{t("library.sessionArtifacts")}</div>
       <div className="artifact-list">
-        {props.artifacts.map((artifact) => (
-          <button key={artifact.id} className="artifact-item" onClick={() => setActive(artifact)}>
-            <ArtifactIcon kind={artifact.kind} />
-            <span className="artifact-meta">
-              <span className="artifact-title">{artifact.title}</span>
-              <span className="artifact-sub">
-                {artifact.isCanonical ? `${t("library.report")} · ` : ""}
-                {formatSize(artifact.sizeBytes)}
-              </span>
-            </span>
-          </button>
+        {primaryArtifacts.map((artifact) => (
+          <ArtifactRow key={artifact.id} artifact={artifact} onOpen={() => setActive(artifact)} />
         ))}
+
+        {rawArtifacts.length > 0 ? (
+          <div className="artifact-group">
+            <button
+              className="artifact-group-toggle"
+              onClick={() => setRawExpanded((value) => !value)}
+              aria-expanded={rawExpanded}
+            >
+              <ChevronRight
+                size={15}
+                className={`artifact-chevron${rawExpanded ? " open" : ""}`}
+              />
+              <Folder size={15} className="artifact-icon" />
+              <span className="artifact-meta">
+                <span className="artifact-title">{t("library.rawFiles")}</span>
+                <span className="artifact-sub">{t("library.rawCount", { count: rawArtifacts.length })}</span>
+              </span>
+            </button>
+            {rawExpanded ? (
+              <div className="artifact-group-items">
+                {rawArtifacts.map((artifact) => (
+                  <ArtifactRow key={artifact.id} artifact={artifact} onOpen={() => setActive(artifact)} />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {active ? (
         <ArtifactPreview sessionId={props.sessionId} artifact={active} onClose={() => setActive(null)} />
       ) : null}
     </aside>
+  );
+}
+
+function ArtifactRow(props: { artifact: ResearchArtifact; onOpen: () => void }) {
+  const { t } = useTranslation();
+  const { artifact } = props;
+  return (
+    <button className="artifact-item" onClick={props.onOpen} title={artifact.relativePath}>
+      <ArtifactIcon kind={artifact.kind} />
+      <span className="artifact-meta">
+        <span className="artifact-title">{artifact.title}</span>
+        <span className="artifact-sub">
+          {artifact.isCanonical ? `${t("library.report")} · ` : ""}
+          {formatSize(artifact.sizeBytes)}
+        </span>
+      </span>
+    </button>
   );
 }
 

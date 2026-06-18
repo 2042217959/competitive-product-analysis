@@ -15,6 +15,7 @@ import {
   deleteSession,
   fetchBootstrap,
   fetchSessionMessages,
+  renameSession,
   startAgentRun,
   type AgentRunHandle,
 } from "./api.js";
@@ -129,6 +130,28 @@ export function App() {
     } catch (nextError) {
       setError(errorMessage(nextError));
       return null;
+    }
+  }
+
+  async function handleRenameSession(sessionId: string, title: string) {
+    const trimmed = title.trim();
+    if (!trimmed) return;
+    const previous = sessions.find((session) => session.id === sessionId);
+    if (!previous || previous.title === trimmed) return;
+    // Optimistic update; reconcile with the server response (which also bumps updatedAt).
+    setSessions((current) =>
+      current.map((session) => (session.id === sessionId ? { ...session, title: trimmed } : session)),
+    );
+    try {
+      const updated = await renameSession(sessionId, trimmed);
+      setSessions((current) =>
+        current.map((session) => (session.id === sessionId ? updated : session)),
+      );
+    } catch (nextError) {
+      setSessions((current) =>
+        current.map((session) => (session.id === sessionId ? previous : session)),
+      );
+      setError(errorMessage(nextError));
     }
   }
 
@@ -287,6 +310,7 @@ export function App() {
         activeSessionId={activeSessionId}
         onSelect={handleSelectSession}
         onCreate={() => void handleCreateSession()}
+        onRename={(id, title) => void handleRenameSession(id, title)}
         onDelete={(id) => void handleDeleteSession(id)}
         onOpenLibrary={() => setLibraryOpen(true)}
       />

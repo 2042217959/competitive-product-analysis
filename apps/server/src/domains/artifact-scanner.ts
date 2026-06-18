@@ -69,6 +69,10 @@ export async function scanRunArtifacts(
       continue;
     }
 
+    // The raw evidence cache produces many zero-byte stubs (e.g. opencli runs
+    // that returned nothing); skip them so they don't flood the artifact list.
+    if (kind === "raw" && size === 0) continue;
+
     let title = file.basename;
     let summary: string | undefined;
     const isReport = kind === "report";
@@ -83,6 +87,10 @@ export async function scanRunArtifacts(
       title = "Run metadata";
     } else if (kind === "checkpoint") {
       title = file.basename.replace(/\.md$/, "");
+    } else if (kind === "raw") {
+      // Keep the source path (e.g. "raw/web/lovart_home.html") as the title so
+      // the cached evidence is traceable back to where it came from.
+      title = toPosix(path.relative(cwd, file.absolutePath)) || file.basename;
     }
 
     artifacts.push({
@@ -99,8 +107,9 @@ export async function scanRunArtifacts(
     });
   }
 
-  // Keep the canonical report first.
-  artifacts.sort((left, right) => Number(Boolean(right.isCanonical)) - Number(Boolean(left.isCanonical)));
+  // Keep the canonical report first and push the raw evidence cache last so the
+  // curated outputs (report / inventory / meta / checkpoints) stay on top.
+  artifacts.sort((left, right) => artifactOrder(left) - artifactOrder(right));
 
   return { artifacts, productName, reportTitle };
 }
@@ -125,12 +134,30 @@ async function walk(dir: string, depth: number, inRaw: boolean, out: ScannedFile
 }
 
 function classify(basename: string, inRaw: boolean): ArtifactKind | null {
-  if (inRaw) return null; // raw evidence cache is not surfaced as an artifact.
+  if (inRaw) return "raw"; // raw evidence cache (web/opencli/source_log) is surfaced too.
   if (basename === "report.md") return "report";
   if (basename === "inventory.md") return "inventory";
   if (basename === "meta.json") return "meta";
   if (/^checkpoint_stage\d\.md$/.test(basename)) return "checkpoint";
   return null;
+}
+
+const KIND_ORDER: Record<ArtifactKind, number> = {
+  report: 0,
+  inventory: 1,
+  meta: 2,
+  checkpoint: 3,
+  other: 4,
+  raw: 5,
+};
+
+function artifactOrder(artifact: ResearchArtifact): number {
+  if (artifact.isCanonical) return -1;
+  return KIND_ORDER[artifact.kind] ?? 4;
+}
+
+function toPosix(value: string): string {
+  return value.split(path.sep).join("/");
 }
 
 async function firstHeading(absolutePath: string): Promise<string | null> {

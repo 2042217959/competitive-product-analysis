@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /**
- * Competitive Research Studio is a chat-first workspace: every research task is
+ * Competitive Analysis is a chat-first workspace: every research task is
  * a conversation, the local agent drives the product-swipefile skill, and the
  * artifacts it produces (report.md / inventory.md / raw / meta.json) are
  * captured under a single, unified store and surfaced as Tutti references.

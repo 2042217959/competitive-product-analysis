@@ -1,6 +1,6 @@
-# Competitive Research Studio
+# Competitive Analysis
 
-Competitive Research Studio is a local-first Tutti workspace app for product
+Competitive Analysis is a local-first Tutti workspace app for product
 research. It is **chat-first**: you ask a local agent to research a product, and
 it runs an evidence-backed teardown that stays attached to the workspace.
 

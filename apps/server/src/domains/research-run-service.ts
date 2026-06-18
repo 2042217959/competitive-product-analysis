@@ -1,4 +1,5 @@
-import { mkdir } from "node:fs/promises";
+import { mkdir, readdir } from "node:fs/promises";
+import path from "node:path";
 
 import { nanoid } from "nanoid";
 import type {
@@ -65,7 +66,13 @@ export class ResearchRunService {
     await this.store.upsertMessage(session.id, userMessage);
     await this.store.setSessionStatus(session.id, "running");
 
-    const cwd = this.store.runDir(session.id, runId);
+    // Resume support: if the previous turn in this session was interrupted
+    // (timed out / failed / cancelled) and left a run directory with collected
+    // evidence, reuse that working directory so the skill's stage-status can
+    // continue from where it stopped instead of restarting from scratch.
+    const resumeCwd = await this.findResumableRunCwd(session.id, priorMessages);
+    const cwd = resumeCwd ?? this.store.runDir(session.id, runId);
+    const resuming = resumeCwd !== null;
     await mkdir(cwd, { recursive: true });
 
     const skill = this.config.paths.skillDir
@@ -84,6 +91,7 @@ export class ResearchRunService {
       pythonBin: this.config.pythonBin,
       ...(request.provider ? { provider: request.provider } : {}),
       ...(request.model ? { model: request.model } : {}),
+      ...(resuming ? { resuming: true } : {}),
       signal: controller.signal,
     };
 
@@ -182,9 +190,11 @@ export class ResearchRunService {
           case "file_write":
             emit({ type: "file_write", runId, path: event.path });
             break;
-          case "stderr":
-            emit({ type: "status", runId, message: event.text });
+          case "stderr": {
+            const clean = sanitizeRuntimeMessage(event.text);
+            if (clean) emit({ type: "status", runId, message: clean });
             break;
+          }
         }
       }
 
@@ -221,7 +231,8 @@ export class ResearchRunService {
       emit({ type: "assistant_message", runId, sessionId: session.id, message: assistantMessage });
       emit({ type: "session_updated", runId, session: updatedSession });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Research run failed";
+      const raw = error instanceof Error ? error.message : "Research run failed";
+      const message = sanitizeRuntimeMessage(raw) || "Research run failed. Please try again.";
       const cancelled = controller.signal.aborted;
       await persistChain;
       const assistantMessage: ChatMessage = {
@@ -234,7 +245,10 @@ export class ResearchRunService {
       };
       await this.store.upsertMessage(session.id, assistantMessage);
       const updatedSession =
-        (await this.store.setSessionStatus(session.id, cancelled ? "idle" : "failed")) ?? session;
+        (await this.store.updateSession(session.id, {
+          status: cancelled ? "idle" : "failed",
+          lastRunId: runId,
+        })) ?? session;
       if (!cancelled) {
         emit({ type: "run_failed", runId, message });
       }
@@ -244,6 +258,26 @@ export class ResearchRunService {
       this.activeRuns.delete(runId);
       emit({ type: "run_finished", runId });
     }
+  }
+
+  /**
+   * If the most recent assistant turn was interrupted and its run directory
+   * still holds an in-progress research run (a new-run was created or evidence
+   * was collected), return that directory so the next turn can resume it.
+   * Returns null when there is nothing worth resuming (fresh run instead).
+   */
+  private async findResumableRunCwd(
+    sessionId: string,
+    priorMessages: ChatMessage[],
+  ): Promise<string | null> {
+    const lastAssistant = [...priorMessages].reverse().find((message) => message.role === "assistant");
+    if (!lastAssistant?.runId) return null;
+    // Only resume an interrupted run; a completed run starts fresh so a new
+    // question doesn't get appended onto a finished report's directory.
+    if (lastAssistant.runStatus !== "failed" && lastAssistant.runStatus !== "cancelled") return null;
+
+    const priorCwd = this.store.runDir(sessionId, lastAssistant.runId);
+    return (await hasResumableRun(priorCwd)) ? priorCwd : null;
   }
 
   async cancel(runId: string): Promise<{ cancelled: boolean }> {
@@ -266,6 +300,34 @@ export class ResearchRunService {
   }
 }
 
+/** Files that mark a run directory as worth resuming (created by the skill). */
+const RESUMABLE_RUN_MARKERS = new Set(["run.json", "meta.json", "inventory.md", "report.md"]);
+const RESUMABLE_SKIP_DIRS = new Set([".local-agent", "__pycache__", ".git", "node_modules"]);
+const RESUMABLE_MAX_DEPTH = 5;
+
+/**
+ * Walk a prior run's working directory looking for any sign that the skill's
+ * `new-run` executed or evidence was collected. The skill materialization dir
+ * (.local-agent) is ignored since it is recreated every run.
+ */
+async function hasResumableRun(cwd: string, depth = 0): Promise<boolean> {
+  if (depth > RESUMABLE_MAX_DEPTH) return false;
+  let entries;
+  try {
+    entries = await readdir(cwd, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  for (const entry of entries) {
+    if (entry.isFile() && RESUMABLE_RUN_MARKERS.has(entry.name)) return true;
+  }
+  for (const entry of entries) {
+    if (!entry.isDirectory() || RESUMABLE_SKIP_DIRS.has(entry.name)) continue;
+    if (await hasResumableRun(path.join(cwd, entry.name), depth + 1)) return true;
+  }
+  return false;
+}
+
 function buildHistory(messages: ChatMessage[]): RuntimeHistoryMessage[] {
   return messages
     .slice(-HISTORY_TURN_LIMIT)
@@ -278,6 +340,27 @@ function buildHistory(messages: ChatMessage[]): RuntimeHistoryMessage[] {
         .trim(),
     }))
     .filter((message) => message.content.length > 0);
+}
+
+/**
+ * Strip environment/CLI noise that is meaningless to a research user before a
+ * message is shown in the chat: Claude Code SessionStart/SessionEnd hook
+ * failures (e.g. an external "Flux Island" hook), bare "Hook cancelled" lines,
+ * and resume-session diagnostics that the orchestrator already recovers from.
+ */
+function sanitizeRuntimeMessage(value: string): string {
+  const NOISE_LINE = [
+    /Session(?:Start|End) hook .*failed/i,
+    /^\s*Hook (?:cancelled|canceled)\.?\s*$/i,
+    /Flux Island/i,
+    /No conversation found with session ID/i,
+    /ELECTRON_RUN_AS_NODE/i,
+  ];
+  return value
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0 && !NOISE_LINE.some((pattern) => pattern.test(line)))
+    .join("\n")
+    .trim();
 }
 
 function deriveTitle(prompt: string): string {
