@@ -1,6 +1,6 @@
 {
   "name": "product-competition",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "license": "Apache-2.0",
@@ -11,7 +11,8 @@
     "dev:server": "pnpm --filter @product-competition/server dev",
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
-    "check": "pnpm run typecheck",
+    "check:i18n": "node scripts/check-i18n.mjs",
+    "check": "pnpm run typecheck && pnpm run check:i18n",
     "package:tutti": "node scripts/package-tutti-app.mjs",
     "serve:catalog": "node scripts/serve-local-catalog.mjs"
   },

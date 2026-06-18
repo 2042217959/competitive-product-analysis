@@ -1,4 +1,7 @@
 :root {
+  /* Adapt native controls (scrollbars, form widgets, caret) to the host theme.
+     Tutti drives light/dark via prefers-color-scheme, not a launch URL param. */
+  color-scheme: light;
   --bg: #f6f7f9;
   --surface: #ffffff;
   --surface-2: #f1f3f5;
@@ -22,6 +25,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    color-scheme: dark;
     --bg: #0e1116;
     --surface: #161a20;
     --surface-2: #1c2129;

@@ -181,6 +181,34 @@ export class SessionStore {
     return merged;
   }
 
+  /**
+   * Read one captured artifact's content, resolving its data-relative path
+   * against dataDir and rejecting any path that escapes the data root. Shared by
+   * the HTTP artifact-content route and the Tutti CLI `report` command so both
+   * apply the same containment check. Returns null when the artifact is unknown
+   * or unreadable.
+   */
+  async readArtifactContent(
+    sessionId: string,
+    artifactId: string,
+  ): Promise<{ artifact: ResearchArtifact; content: string; mimeType: string } | null> {
+    const artifact = (await this.getArtifacts(sessionId)).find((item) => item.id === artifactId);
+    if (!artifact) return null;
+    const dataRoot = path.resolve(this.paths.dataDir);
+    const absolute = path.resolve(dataRoot, artifact.relativePath);
+    if (absolute !== dataRoot && !absolute.startsWith(dataRoot + path.sep)) return null;
+    try {
+      const content = await readFile(absolute, "utf8");
+      return {
+        artifact,
+        content,
+        mimeType: artifact.relativePath.endsWith(".json") ? "application/json" : "text/markdown",
+      };
+    } catch {
+      return null;
+    }
+  }
+
   // --- recovery / self-healing -------------------------------------------
 
   /**

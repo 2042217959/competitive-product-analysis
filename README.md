@@ -12,10 +12,26 @@ it runs an evidence-backed teardown that stays attached to the workspace.
   - `packages/shared`: shared domain contracts
 - The vendored [`product-swipefile`](https://github.com/nothingbutcici/product-swipefile)
   research skill under `apps/server/skills/`, injected into every agent run.
-- Tutti packaging metadata: `tutti.app.json`, `bootstrap.sh`, `scripts/package-tutti-app.mjs`
+- Tutti packaging metadata: `tutti.app.json`, `tutti.cli.json`, `bootstrap.sh`, `scripts/package-tutti-app.mjs`
 - Local-first persistence and Tutti references:
   - sessions, messages, and artifacts stored under `TUTTI_APP_DATA_DIR/sessions`
-  - captured research artifacts exposed through `/tutti/references/list`
+  - captured research artifacts exposed through `/tutti/references/list` and searchable via `/tutti/references/search`
+- Ecosystem integration so other Tutti apps and agents can drive it:
+  - a `competition` CLI scope (`status`, `sessions`, `reports`, `report`, `research`) declared in `tutti.cli.json` — see [`COMMANDS.md`](COMMANDS.md)
+  - graceful `TUTTI_CLI` consumption for calling sibling apps / the daemon
+- Internationalization (English + 简体中文) with light/dark theming via `prefers-color-scheme`
+
+## Tutti ecosystem
+
+Other apps and agents call this app through the bundled Tutti CLI:
+
+```bash
+"$TUTTI_CLI" --json competition status
+"$TUTTI_CLI" --json competition reports --query notion
+"$TUTTI_CLI" --json competition research --product "Linear"
+```
+
+See [`COMMANDS.md`](COMMANDS.md) for the full command and HTTP surface.
 
 ## How it works
 

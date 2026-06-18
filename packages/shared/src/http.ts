@@ -16,4 +16,12 @@ export const API_ROUTES = {
   },
   agentStream: "/api/agent/stream",
   referencesList: "/tutti/references/list",
+  referencesSearch: "/tutti/references/search",
+  // Tutti CLI capability handlers. Each path matches a command in tutti.cli.json
+  // as `/tutti/cli/${command.path.join("/")}`.
+  cliStatus: "/tutti/cli/status",
+  cliSessions: "/tutti/cli/sessions",
+  cliReports: "/tutti/cli/reports",
+  cliReport: "/tutti/cli/report",
+  cliResearch: "/tutti/cli/research",
 } as const;

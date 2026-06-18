@@ -186,6 +186,66 @@ export const referenceListResponseSchema = z.object({
   nextCursor: z.string().nullable().optional(),
 });
 
+/** Recursive search request (POST /tutti/references/search). */
+export const referenceSearchRequestSchema = z.object({
+  query: z.string().min(1),
+  limit: z.number().int().min(1).max(50).optional(),
+  cursor: z.string().optional().nullable(),
+  kinds: z.array(z.literal("file")).optional(),
+  timeRange: z
+    .object({
+      fromMs: z.number().int().optional(),
+      toMs: z.number().int().optional(),
+    })
+    .optional(),
+});
+
+// ---------------------------------------------------------------------------
+// Tutti CLI capability surface (tutti.cli.json -> /tutti/cli/*)
+//
+// These shapes mirror the command inputSchemas declared in tutti.cli.json so
+// other Tutti apps and agents can call this app's research library and kick off
+// runs through the bundled Tutti CLI. Keep the two in sync.
+// ---------------------------------------------------------------------------
+
+export const cliStatusRequestSchema = z.object({}).passthrough();
+
+export const cliSessionsRequestSchema = z.object({
+  query: z.string().optional(),
+  limit: z.number().int().min(1).max(100).optional(),
+});
+
+export const cliReportsRequestSchema = z.object({
+  session: z.string().optional(),
+  query: z.string().optional(),
+  limit: z.number().int().min(1).max(200).optional(),
+});
+
+export const cliReportRequestSchema = z.object({
+  session: z.string().min(1),
+  artifact: z.string().min(1),
+});
+
+export const cliResearchRequestSchema = z.object({
+  product: z.string().min(1),
+  session: z.string().optional(),
+  provider: z.string().optional(),
+  model: z.string().optional(),
+});
+
+/**
+ * Response envelope every /tutti/cli/* handler returns. App-to-app callers use
+ * `--json`, so handlers always emit the `json` kind; the `table` variant is
+ * declared for completeness and human-facing rendering.
+ */
+export type CliCommandOutput =
+  | { kind: "json"; value: unknown }
+  | {
+      kind: "table";
+      columns: Array<{ key: string; label: string }>;
+      rows: Array<Record<string, string | number | boolean | null>>;
+    };
+
 // ---------------------------------------------------------------------------
 // WebSocket client messages
 // ---------------------------------------------------------------------------
@@ -229,6 +289,12 @@ export type CreateSessionInput = z.infer<typeof createSessionInputSchema>;
 export type SessionMessagesResponse = z.infer<typeof sessionMessagesResponseSchema>;
 export type ReferenceListRequest = z.infer<typeof referenceListRequestSchema>;
 export type ReferenceListResponse = z.infer<typeof referenceListResponseSchema>;
+export type ReferenceSearchRequest = z.infer<typeof referenceSearchRequestSchema>;
+export type CliStatusRequest = z.infer<typeof cliStatusRequestSchema>;
+export type CliSessionsRequest = z.infer<typeof cliSessionsRequestSchema>;
+export type CliReportsRequest = z.infer<typeof cliReportsRequestSchema>;
+export type CliReportRequest = z.infer<typeof cliReportRequestSchema>;
+export type CliResearchRequest = z.infer<typeof cliResearchRequestSchema>;
 export type FileReference = z.infer<typeof fileReferenceSchema>;
 export type ReferenceGroup = z.infer<typeof referenceGroupSchema>;
 export type AgentRunClientMessage = z.infer<typeof agentRunClientMessageSchema>;

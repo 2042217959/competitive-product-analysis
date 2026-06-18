@@ -1,6 +1,7 @@
 import type {
   ReferenceListRequest,
   ReferenceListResponse,
+  ReferenceSearchRequest,
   ResearchArtifact,
 } from "@product-competition/shared";
 
@@ -85,6 +86,73 @@ export async function buildReferenceList(
   }));
 
   return { items, nextCursor: null };
+}
+
+/**
+ * Recursive search across every session's artifacts (POST /tutti/references/search).
+ * Unlike the per-level `filterText` on the list endpoint, this spans the whole
+ * app and returns a flat, relevance-ordered list of file references, each tagged
+ * with its session as `parentGroupLabel`.
+ */
+export async function searchReferences(
+  request: ReferenceSearchRequest,
+  store: SessionStore,
+): Promise<ReferenceListResponse> {
+  const query = request.query.toLowerCase();
+  const fromMs = request.timeRange?.fromMs ?? Number.MIN_SAFE_INTEGER;
+  const toMs = request.timeRange?.toMs ?? Number.MAX_SAFE_INTEGER;
+
+  const matches: Array<{ score: number; sessionTitle: string; artifact: ResearchArtifact }> = [];
+  for (const session of await store.listSessions()) {
+    const artifacts = await store.getArtifacts(session.id);
+    for (const artifact of artifacts) {
+      const mtimeMs = Date.parse(artifact.createdAt);
+      if (Number.isFinite(mtimeMs) && (mtimeMs < fromMs || mtimeMs > toMs)) continue;
+      const score = relevance(query, artifact, session.title, session.productName);
+      if (score <= 0) continue;
+      matches.push({ score, sessionTitle: session.title, artifact });
+    }
+  }
+
+  matches.sort((left, right) => right.score - left.score);
+
+  const items = matches.slice(0, request.limit ?? 20).map(({ score, sessionTitle, artifact }) => ({
+    type: "reference" as const,
+    reference: {
+      kind: "file" as const,
+      displayName: displayName(artifact),
+      ...(artifact.summary ? { description: artifact.summary } : {}),
+      location: {
+        type: "app-data-relative" as const,
+        path: artifact.relativePath,
+      },
+      mimeType: mimeFor(artifact.relativePath),
+      sizeBytes: artifact.sizeBytes,
+      mtimeMs: Date.parse(artifact.createdAt),
+      score,
+      parentGroupLabel: sessionTitle,
+    },
+  }));
+
+  return { items, nextCursor: null };
+}
+
+/** Cheap relevance score in [0,1]; 0 means no match. */
+function relevance(
+  query: string,
+  artifact: ResearchArtifact,
+  sessionTitle: string,
+  productName: string | undefined,
+): number {
+  const title = artifact.title.toLowerCase();
+  const summary = (artifact.summary ?? "").toLowerCase();
+  const session = sessionTitle.toLowerCase();
+  const product = (productName ?? "").toLowerCase();
+  if (title.includes(query)) return artifact.isCanonical ? 1 : 0.9;
+  if (product && product.includes(query)) return 0.8;
+  if (session.includes(query)) return 0.6;
+  if (summary.includes(query)) return 0.5;
+  return 0;
 }
 
 function displayName(artifact: ResearchArtifact): string {

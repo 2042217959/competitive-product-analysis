@@ -18,6 +18,9 @@ import { scanRunArtifacts } from "./artifact-scanner.js";
 
 export type EmitAgentRunEvent = (event: AgentRunEvent) => void;
 
+/** Event sink for detached runs that have no connected client. */
+const NOOP_EMIT: EmitAgentRunEvent = () => {};
+
 const DEFAULT_TITLE = "New research";
 const HISTORY_TURN_LIMIT = 12;
 
@@ -45,8 +48,19 @@ export class ResearchRunService {
     private readonly provider: LocalAgentResearchProvider,
   ) {}
 
-  async start(request: AgentRunStartRequest, emit: EmitAgentRunEvent): Promise<void> {
+  /**
+   * Start a run without a live event sink (used by the Tutti CLI `research`
+   * command). The run still persists its user/assistant messages and artifacts
+   * to disk exactly like a streamed turn, so callers poll `sessions`/`reports`
+   * for completion. Returns immediately with the ids needed to track it.
+   */
+  startDetached(request: AgentRunStartRequest): { runId: string; sessionId: string } {
     const runId = nanoid();
+    void this.start(request, NOOP_EMIT, runId).catch(() => undefined);
+    return { runId, sessionId: request.sessionId };
+  }
+
+  async start(request: AgentRunStartRequest, emit: EmitAgentRunEvent, runId = nanoid()): Promise<void> {
     const session = await this.store.getSession(request.sessionId);
     if (!session) {
       emit({ type: "run_failed", runId, message: `Session not found: ${request.sessionId}` });

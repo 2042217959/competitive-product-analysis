@@ -1,7 +1,7 @@
 {
   "schemaVersion": "tutti.app.manifest.v1",
   "appId": "product-competition",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "name": "Competitive Analysis",
   "description": "Chat with a local agent to run evidence-backed product teardowns and keep every report in one place.",
   "icon": {
@@ -12,8 +12,12 @@
     "bootstrap": "bootstrap.sh",
     "healthcheckPath": "/api/health"
   },
+  "cli": {
+    "manifest": "tutti.cli.json"
+  },
   "references": {
-    "listEndpoint": "/tutti/references/list"
+    "listEndpoint": "/tutti/references/list",
+    "searchEndpoint": "/tutti/references/search"
   },
   "window": {
     "minimizeBehavior": "keep-mounted",

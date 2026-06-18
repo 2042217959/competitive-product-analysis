@@ -6,18 +6,33 @@ import fastifyStatic from "@fastify/static";
 import fastifyWebsocket from "@fastify/websocket";
 import {
   agentRunClientMessageSchema,
+  cliReportRequestSchema,
+  cliReportsRequestSchema,
+  cliResearchRequestSchema,
+  cliSessionsRequestSchema,
+  cliStatusRequestSchema,
   createSessionInputSchema,
   referenceListRequestSchema,
+  referenceSearchRequestSchema,
   API_ROUTES,
   type AgentRunEvent,
 } from "@product-competition/shared";
 
+import { APP_ID, APP_NAME, APP_VERSION } from "./app-meta.js";
 import { createRuntimeConfig } from "./config.js";
 import { detectAgentProviders, pickDefaultProvider } from "./domains/agent-service.js";
-import { buildReferenceList } from "./domains/reference-service.js";
+import {
+  cliGetReport,
+  cliListReports,
+  cliListSessions,
+  cliStartResearch,
+  cliStatus,
+} from "./domains/cli-service.js";
+import { buildReferenceList, searchReferences } from "./domains/reference-service.js";
 import { ResearchRunService } from "./domains/research-run-service.js";
 import { SessionStore } from "./local/session-store.js";
 import { LocalAgentResearchProvider } from "./runtimes/local-agent-provider.js";
+import { tuttiCliCommand } from "./runtimes/tutti-cli.js";
 
 const runtimeConfig = await createRuntimeConfig();
 const app = Fastify({ logger: false });
@@ -41,9 +56,12 @@ if (runtimeConfig.paths.webDistDir) {
 
 app.get(API_ROUTES.health, async () => ({
   ok: true,
-  name: "product-competition",
-  version: "0.1.3",
+  name: APP_ID,
+  displayName: APP_NAME,
+  version: APP_VERSION,
   skillAvailable: Boolean(runtimeConfig.paths.skillDir),
+  // Sync, no spawn: whether the Tutti CLI bridge is wired into this runtime.
+  tuttiCli: tuttiCliCommand() !== null,
 }));
 
 app.get(API_ROUTES.bootstrap, async () => {
@@ -113,26 +131,11 @@ app.get("/api/sessions/:sessionId/messages", async (request, reply) => {
 
 app.get("/api/sessions/:sessionId/artifacts/:artifactId/content", async (request, reply) => {
   const { sessionId, artifactId } = request.params as { sessionId: string; artifactId: string };
-  const artifacts = await store.getArtifacts(sessionId);
-  const artifact = artifacts.find((item) => item.id === artifactId);
-  if (!artifact) {
+  const result = await store.readArtifactContent(sessionId, artifactId);
+  if (!result) {
     return reply.status(404).send({ error: "artifact_not_found" });
   }
-  const absolute = path.resolve(runtimeConfig.paths.dataDir, artifact.relativePath);
-  const dataRoot = path.resolve(runtimeConfig.paths.dataDir);
-  if (!absolute.startsWith(dataRoot + path.sep)) {
-    return reply.status(400).send({ error: "invalid_artifact_path" });
-  }
-  try {
-    const content = await readFile(absolute, "utf8");
-    return {
-      artifact,
-      content,
-      mimeType: artifact.relativePath.endsWith(".json") ? "application/json" : "text/markdown",
-    };
-  } catch {
-    return reply.status(404).send({ error: "artifact_unreadable" });
-  }
+  return result;
 });
 
 // Streaming research runs. One run per socket connection.
@@ -186,6 +189,59 @@ app.post(API_ROUTES.referencesList, async (request, reply) => {
     return reply.status(400).send({ error: "invalid_reference_request", details: result.error.flatten() });
   }
   return buildReferenceList(result.data, store);
+});
+
+app.post(API_ROUTES.referencesSearch, async (request, reply) => {
+  const result = referenceSearchRequestSchema.safeParse(request.body);
+  if (!result.success) {
+    return reply.status(400).send({ error: "invalid_search_request", details: result.error.flatten() });
+  }
+  return searchReferences(result.data, store);
+});
+
+// --- Tutti CLI capability surface (tutti.cli.json -> /tutti/cli/*) ----------
+// These let other Tutti apps and agents read this app's research library and
+// start runs. Handlers parse with the shared CLI schemas and return the
+// CliCommandOutput envelope; business logic lives in cli-service.
+
+app.post(API_ROUTES.cliStatus, async (request, reply) => {
+  const result = cliStatusRequestSchema.safeParse(request.body ?? {});
+  if (!result.success) {
+    return reply.status(400).send({ error: "invalid_cli_request", details: result.error.flatten() });
+  }
+  return cliStatus(runtimeConfig, store);
+});
+
+app.post(API_ROUTES.cliSessions, async (request, reply) => {
+  const result = cliSessionsRequestSchema.safeParse(request.body ?? {});
+  if (!result.success) {
+    return reply.status(400).send({ error: "invalid_cli_request", details: result.error.flatten() });
+  }
+  return cliListSessions(result.data, store);
+});
+
+app.post(API_ROUTES.cliReports, async (request, reply) => {
+  const result = cliReportsRequestSchema.safeParse(request.body ?? {});
+  if (!result.success) {
+    return reply.status(400).send({ error: "invalid_cli_request", details: result.error.flatten() });
+  }
+  return cliListReports(result.data, store);
+});
+
+app.post(API_ROUTES.cliReport, async (request, reply) => {
+  const result = cliReportRequestSchema.safeParse(request.body ?? {});
+  if (!result.success) {
+    return reply.status(400).send({ error: "invalid_cli_request", details: result.error.flatten() });
+  }
+  return cliGetReport(result.data, store);
+});
+
+app.post(API_ROUTES.cliResearch, async (request, reply) => {
+  const result = cliResearchRequestSchema.safeParse(request.body ?? {});
+  if (!result.success) {
+    return reply.status(400).send({ error: "invalid_cli_request", details: result.error.flatten() });
+  }
+  return cliStartResearch(result.data, store, researchRuns);
 });
 
 if (runtimeConfig.paths.webDistDir) {

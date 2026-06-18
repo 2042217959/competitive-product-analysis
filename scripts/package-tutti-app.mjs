@@ -8,7 +8,7 @@ const packageRoot = path.join(buildRoot, "package");
 const packageServerDir = path.join(packageRoot, "server");
 const packageWebDir = path.join(packageRoot, "web");
 const appId = "product-competition";
-const version = "0.1.3";
+const version = "0.2.0";
 
 await run("pnpm", ["build"], rootDir);
 await rm(buildRoot, { recursive: true, force: true });
@@ -24,6 +24,7 @@ await cp(
 await cp(path.join(rootDir, "apps", "web", "dist"), packageWebDir, { recursive: true });
 await cp(path.join(rootDir, "bootstrap.sh"), path.join(packageRoot, "bootstrap.sh"));
 await cp(path.join(rootDir, "tutti.app.json"), path.join(packageRoot, "tutti.app.json"));
+await cp(path.join(rootDir, "tutti.cli.json"), path.join(packageRoot, "tutti.cli.json"));
 await cp(path.join(rootDir, "icon.svg"), path.join(packageRoot, "icon.svg"));
 await cp(path.join(rootDir, "AGENTS.md"), path.join(packageRoot, "AGENTS.md"));
 await cp(path.join(rootDir, "COMMANDS.md"), path.join(packageRoot, "COMMANDS.md"));
