@@ -5,6 +5,7 @@ node_modules/
 dist/
 build/
 .next/
+.vite/
 *.tsbuildinfo
 
 # Runtime artifacts — durable app data (sessions, reports, runtime) lives under
