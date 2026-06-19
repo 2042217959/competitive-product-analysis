@@ -137,7 +137,16 @@ export async function searchReferences(
   return { items, nextCursor: null };
 }
 
-/** Cheap relevance score in [0,1]; 0 means no match. */
+/**
+ * Relevance score in [0,1]; 0 excludes the file from results.
+ *
+ * Per the Tutti references search contract, a file may appear only when its own
+ * name — the `displayName` we return, i.e. the artifact title or filename —
+ * contains the query. The containing session title and product name must never
+ * pull a non-matching file in; they only break ties between files that already
+ * match by name (so searching a product surfaces that product's report, not
+ * every generically-titled artifact that merely lives in the same session).
+ */
 function relevance(
   query: string,
   artifact: ResearchArtifact,
@@ -145,14 +154,15 @@ function relevance(
   productName: string | undefined,
 ): number {
   const title = artifact.title.toLowerCase();
-  const summary = (artifact.summary ?? "").toLowerCase();
-  const session = sessionTitle.toLowerCase();
-  const product = (productName ?? "").toLowerCase();
-  if (title.includes(query)) return artifact.isCanonical ? 1 : 0.9;
-  if (product && product.includes(query)) return 0.8;
-  if (session.includes(query)) return 0.6;
-  if (summary.includes(query)) return 0.5;
-  return 0;
+  const filename = (artifact.relativePath.split("/").pop() ?? "").toLowerCase();
+  if (!title.includes(query) && !filename.includes(query)) return 0;
+
+  let score = artifact.isCanonical ? 0.95 : 0.85;
+  if (title.startsWith(query) || filename.startsWith(query)) score += 0.04;
+  // Tie-breakers only: context can lift ranking but never forces inclusion.
+  if ((productName ?? "").toLowerCase().includes(query)) score += 0.02;
+  else if (sessionTitle.toLowerCase().includes(query)) score += 0.01;
+  return Math.min(score, 1);
 }
 
 function displayName(artifact: ResearchArtifact): string {

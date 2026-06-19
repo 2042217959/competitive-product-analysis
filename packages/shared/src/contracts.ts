@@ -163,6 +163,8 @@ export const fileReferenceSchema = z.object({
   mtimeMs: z.number().int().optional(),
   mimeType: z.string().optional(),
   score: z.number().min(0).max(1).optional(),
+  /** Context subtitle for flattened search results (the file's session/group). */
+  parentGroupLabel: z.string().max(160).optional(),
 });
 
 export const referenceGroupSchema = z.object({
