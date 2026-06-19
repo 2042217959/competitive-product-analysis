@@ -15,7 +15,7 @@
 
 ## 2. 设置
 
-持久设置存于：
+持久设置默认存于下面这个 standalone 路径；脚本支持用 `--path` 覆盖到别处（例如宿主提供的 app 数据目录，用于运行时隔离）：
 
 ```text
 ~/.config/product-swipefile/settings.json

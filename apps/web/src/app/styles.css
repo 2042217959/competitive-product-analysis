@@ -19,8 +19,8 @@
   --radius: 12px;
   --radius-sm: 8px;
   --shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 8px 24px rgba(16, 24, 40, 0.06);
-  --font: "IBM Plex Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font: "IBM Plex Sans", -apple-system, blinkmacsystemfont, "Segoe UI", roboto, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, sfmono-regular, menlo, monospace;
 }
 
 @media (prefers-color-scheme: dark) {

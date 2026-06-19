@@ -11,6 +11,8 @@ description: "对一个明确命名的产品或产品集做深度产品调研（
 
 质量级执行：若当前环境能运行本地脚本，完整深度调研默认走仓库根 `run.py`。它把采集和写作拆成两个 headless 进程，中间强制验证与 checkpoint，以分阶段证据驱动方式产出“先证据、后写作”的质量级报告。交互式执行只作为 fallback：可以手动完成同样阶段、同样产物、同样验证，但不得把未完成卡点的交互式草稿当作质量级报告。
 
+脚本解释器：下文命令中的 `python3` / `./run.py` 为默认写法；若宿主指定了其他 Python 解释器，按宿主提供的解释器替换 `python3` 执行（未指定则用 `python3`）。
+
 ## 1. 触发边界
 
 - 用户用任意语言明确要求「调研 / 分析 <产品>」时使用。
@@ -38,7 +40,7 @@ description: "对一个明确命名的产品或产品集做深度产品调研（
 
 开跑前先跑 `python3 scripts/research_helper.py opencli-check`。如果 `available: false`，给用户这段告知（不阻塞，用户可以选择装或跳过）：
 
-```
+```text
 检测到没装 opencli。
 
 调研仍然能做，我会用网页搜索兜底。但装上 opencli 信息会全面很多——很多平台的「站内真实数据」只有 opencli 能抓到，网页搜索只能看到摘要。
@@ -61,7 +63,7 @@ description: "对一个明确命名的产品或产品集做深度产品调研（
 
 ### 3.2 报告语言
 
-```
+```text
 检测到你用 <中文/英文> 输入，默认 <中文/英文>。要换吗？
 • 中文（默认）
 • 英文
@@ -69,7 +71,7 @@ description: "对一个明确命名的产品或产品集做深度产品调研（
 
 ### 3.3 报告存到哪（多选）
 
-```
+```text
 存到哪？前三个阅读体验最好，可多选：
 
 • Obsidian — 本地离线、Markdown 原生
@@ -85,7 +87,7 @@ description: "对一个明确命名的产品或产品集做深度产品调研（
 ### 3.4 各目标的配置子流程
 
 **Obsidian** — 必须问 vault 路径：
-```
+```text
 Obsidian vault 路径是？
 （vault 通常在 Obsidian 应用 "Vault 设置 → Files & Links" 能看到，
  或直接告诉我 vault 文件夹路径，例如 /Users/你/Documents/MyVault）
@@ -93,13 +95,13 @@ Obsidian vault 路径是？
 检查路径是否存在 + 可写。**不存在直接报错让用户重输**，不自动建目录、不列候选位置猜。vault 内不再问 folder 子目录——报告直接落在 vault 根目录，用户既然指定了这个 vault 就视为可写。
 
 **飞书 / Lark** — 必须问 connector 是否配过：
-```
+```text
 飞书 Page Connector 配过吗？
 • 配过
 • 没配过
 ```
 没配过时给三个选项：
-```
+```text
 (a) 现在给你配置指引（一段说明，按指引装好 connector 再回来）
 (b) 本次先跳过飞书，导其他已选目标
 (c) 不导飞书了
@@ -107,7 +109,7 @@ Obsidian vault 路径是？
 选 (a) 时给一段简短指引：飞书开放平台 → 建 app → 开启文档读写权限 → 拿 connector 配置 → 粘到 `~/.config/product-swipefile/settings.json` 或对应 MCP 配置。完成后用户回来确认 connector_ready。
 
 **Notion** — 必须问两样：
-```
+```text
 Notion 需要：
 • NOTION_TOKEN 环境变量
 • parent page 或 database 的 ID
@@ -117,7 +119,7 @@ Notion 需要：
 指引：Notion → Settings → Connections → Develop or manage integrations → 建 internal integration → 复制 token，**把 token 设成环境变量**（如 `export NOTION_TOKEN=...`，可写进 shell 配置）；**settings.json 只存环境变量名（`NOTION_TOKEN`），绝不写 token 原文**。再把目标 page 或 database 分享给 integration → 复制 page/database ID，把 parent type、parent id 写入 settings.json。
 
 **本地 Markdown** — 必须问目录：
-```
+```text
 本地 Markdown 存到哪个目录？
 • 默认 ~/Documents/ProductResearch
 • 或告诉我别的路径
@@ -127,7 +129,7 @@ Notion 需要：
 ### 3.5 记住默认
 
 所有配置完成后、调研开始**前**问一次：
-```
+```text
 要不要把这套配置（语言 + 已选目标 + 各目标路径与环境变量名，不含 token 原文）记成默认？
 • 是 — 以后说"调研 X"直接跑，不再问
 • 否 — 只这次用
